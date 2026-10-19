@@ -23,7 +23,9 @@ RepAdapt spans far deeper divergence than we have tried on catarrhines (so far a
 
 3. **Adaptive substitution.** Does ωa increase with Ne once divergence counts are added, and does α track Ne only through ωna?  
 
-4. **RepAdapt-specific: DFE of repeated-adaptation genes.** Do the orthogroups repeatedly associated with climate (108 in Whiting et al. 2024) show a different DFE from background genes within the same species? 
+4. **RepAdapt-specific: DFE of repeated-adaptation genes.** Do  orthogroups repeatedly associated with climate (eg 108 in Whiting et al. 2024) 
+show a different DFE from background genes within the same species? 
+
 This uses fastDFE's SFS stratification and can also be extended to finer grained stratifications
 
 Tech note ... RE mating systems, we propose that the issue of Dominance and DFE becomes a sensitivity analysis here, merged with mating system and ploidy (see that section). 
@@ -74,11 +76,11 @@ NB to coordinate with REpDAPT pipeline at the `add_outgroups_vcf`  stage
 
 Inputs per species are the RepAdapt deliverables: realigned BAMs, the reference FASTA and gene GFF, and the VCF from [nextflow\_snp\_calling](https://github.com/RepAdapt/nextflow_snp_calling_linux). That VCF is called with `bcftools mpileup | bcftools call -mv` and filtered only on `AC=AN || MQ<30`, so it is variants-only and minimally filtered — both might matter for DFE work.
 
-**Inclusion criteria (proposed, mirroring PrimateDFE):**
+**Inclusion criteria :**
 
 - $C1$: ≥ 4 diploid individuals (n = 8 haplotypes) from one genetic cluster; more is better, since RepAdapt samples are often larger than the primate panel.
 
-**Q** shoudl we up the number of individuals ? 
+**Q** shoul we up the number of individuals ? 
 (We need a meaningful overview of smaple size per species per pops/per species from SAM)
 
 - $C2$:  High-coverage data only for the main analysis. Species processed with the [ANGSD pipeline](https://github.com/RepAdapt/ANGSD_Snakemake_Pipeline) (< 3X) cannot feed the genotype-based fastDFE parser; at most they enter a folded, deleterious-only side analysis via `realSFS` restricted to 0-fold and 4-fold site lists.
@@ -88,17 +90,26 @@ Inputs per species are the RepAdapt deliverables: realigned BAMs, the reference 
 - $C4$: At least two outgroup assemblies alignable to the reference (see ancestral allele section); otherwise folded SFS only.
 
 
-**Population choice.** RepAdapt sampling spans climate gradients, so pooling a whole species range mixes demes and could  distort the SFS. 
+**Population choice.** RepAdapt sampling often spans climate gradients, 
+so pooling a whole species range mixes demes and could  distort the SFS. 
 
-Proposed Default: one cluster per species from the sNMF ancestry output of the [population\_structure](https://github.com/RepAdapt/population_structure) pipeline; pooled-range SFS as a robustness check.
+Proposed Default: one cluster per species from the sNMF ancestry output 
+of the [population\_structure](https://github.com/RepAdapt/population_structure) pipeline; 
+use 2-3 individual pops and maybe pooled-range SFS as a robustness check.
 
-**Extra genotype filters needed before parsing**, since the RepAdapt VCF lacks them: per-genotype DP window (e.g. 0.5× to 2× sample median), GQ ≥ 20, site missingness ≤ 10% in the chosen cluster (matching the population\_structure threshold), biallelic SNPs only.
+**Extra genotype filters needed before parsing**, since the RepAdapt VCF lacks them: 
+per-genotype DP window (e.g. 0.5× to 2× sample median), 
+GQ ≥ 20, site missingness ≤ 10% in the chosen cluster 
+(matching the population\_structure threshold), biallelic SNPs only.
 
-*Open point*: the list of RepAdapt species that pass these criteria, with sample sizes and reference used, should be a the first table  central summery.
+*Open point*: the list of RepAdapt species that pass these criteria, 
+with sample sizes and reference used, should be a the first table  central summary.
 
 ## Degeneracy annotation
 
-Keep PrimateDFE's approach: fastDFE `DegeneracyAnnotation` on each species' own reference and GFF, retaining 0-fold (selected) and 4-fold (neutral) sites. 
+We propose to use PrimateDFE's approach: 
+fastDFE `DegeneracyAnnotation` on each species' own reference and GFF, 
+retaining 0-fold (selected) and 4-fold (neutral) sites. 
 
 CHECK WITH SAM : 
 Plant annotations need three preparatory steps first:
@@ -263,7 +274,9 @@ Note TB : thi sis just a broad conceptual overview and could be skipped if not u
 Rule chain per species:
 `filter_genotypes` → `callable_cds_sites` (new, all-sites recall on CDS) → `align_minimap` → `paf_to_fasta` → `add_outgroups_vcf` → `annotate_degeneracy` → `filter_degeneracy` → `filter_no_cpg` → `annotate_ancestral_allele` → `compute_sfs` → `estimate_Ne` → `infer_dfe` → `count_divergence` → `infer_dfe_divergence`. Across species: `assemble_dfe_table` → `extract_regression_vars` → `fit_pgls`.
 
-Deliverables : per-species SFS under `results/sfs/` and DFE tables under `results/tables/dfe/`, so both datasets can later be analysed together.
+Deliverables : 
+- per-species SFS (ideally several eg 2-3 pp and a species range SFS ) under `results/sfs/` 
+- DFE tables under `results/tables/dfe/`, so both datasets can later be analysed together.
 
 
 ### Sources
