@@ -5,32 +5,13 @@ Started Oct 19, 2026 · @Thomas Bataillon @Janek Sendrowski
 ## What is this ?
 This is a first-draft skecthing a RepAdapt comparative DFE study, built largely using the template we produced for the [PrimateDFE](https://github.com/Sendrowski/PrimateDFE) reop that implemented Methods of [Sendrowski et al. 2026, Genetics](https://doi.org/10.1093/genetics/iyag252).&#32;
 
-Sections follow the paper's Methods order follows logically from data wrangling, SNP calling,  ancestral state calling and then doing a step by step DFE analysis as well as a series of technical and stats checks
+The broad aim is to sketch the DFE analysis within REpAdapt. 
+
+Sections below order follows logically starting with data wrangling, SNP calling,  ancestral state calling and then doing a step by step DFE analysis as well as a series of technical and stats checks
 
 We review some of the choices PrimateDFE does, then what could/must change for the genomic variation data produced by the [RepAdapt pipelines](https://github.com/RepAdapt).
 
-## Aims and questions
-
-Test clade by clade whether the DFE of amino-acid-changing mutations is conserved across RepAdapt species once differences in Ne are accounted for.
-
-RepAdapt spans far deeper divergence than we have tried on catarrhines (so far about 300 Myr across its 25 plant species, Whiting et al. 2024, [Nat Ecol Evol](https://doi.org/10.1038/s41559-024-02514-5)) and that is fgrowing .. Plus here we can operate with a wider set of  mating-system and life-history contrasts all nested within large kingdom level studies.
-
-### Main Qs:
-
-1. **Conservation of the scaled DFE.** How much do the masses in S = 4Ne·s bins vary across species, and which features are most stable?  
-
-2. **Ne rescaling versus landscape change.** Is cross-species variation explained by Ne alone (quantile slope = 1), or does the unscaled DFE shift with Ne, life form, mating system or ploidy?  
-
-3. **Adaptive substitution.** Does ωa increase with Ne once divergence counts are added, and does α track Ne only through ωna?  
-
-4. **RepAdapt-specific: DFE of repeated-adaptation genes.** Do  orthogroups repeatedly associated with climate (eg 108 in Whiting et al. 2024) 
-show a different DFE from background genes within the same species? 
-
-This uses fastDFE's SFS stratification and can also be extended to finer grained stratifications
-
-Tech note ... RE mating systems, we propose that the issue of Dominance and DFE becomes a sensitivity analysis here, merged with mating system and ploidy (see that section). 
-
-But an open question that remains is how to do valid comparisons for pair of species with different mating system especially from eg purely outcrossing to quite highly selfing?.
+The specific "why we do this"" and hypothesis to be tested is detailed in a companion document `Hypothesis.md`
 
 ## Review of the PrimateDFE pipeline
 
@@ -278,7 +259,6 @@ Deliverables :
 - per-species SFS (ideally several eg 2-3 pp and a species range SFS ) under `results/sfs/` 
 - DFE tables under `results/tables/dfe/`, so both datasets can later be analysed together.
 
-TADA
 
 ### Sources
 
