@@ -15,29 +15,17 @@ The specific "why we do this"" and hypothesis to be tested is detailed in a comp
 
 ## Review of the PrimateDFE pipeline
 
-In its current form the PrimateDFE pipeline can serve as a meaningful template for the RepADAPT analysis plan\
+PrimateDFE is a single Snakemake workflow built on [fastDFE](https://fastdfe.readthedocs.io/en/latest/) (and soon [Ancestree](https://doi.org/10.64898/2026.09.11.750934)). Per species it runs:
 
-It is a single Snakemake workflow (`workflow/Snakefile`, \~3,600 lines, \~200 rules, Python scripts in `workflow/scripts/`, conda envs in `workflow/envs/`) whose analytical core is [fastDFE](https://fastdfe.readthedocs.io/en/latest/)  and  likely  soon [Ancestree](https://doi.org/10.64898/2026.09.11.750934). \
-\
-
-Its README groups the work into SFS construction, DFE inference and comparative analyses; the core chain, by rule, is:
-
-1. **Ingroup VCF prep**: `link_ingroup_vcf` → `filter_exons` → `normalize_vcf_ingroup` / biallelic SNPs only (`filter_sites.py` drops MNPs and REF∈ALT records).
-2. **Outgroup alleles**: `align_minimap` (minimap2 whole-genome alignment of each outgroup assembly to the ingroup reference) → `paf_to_fasta` → `add_outgroups_vcf` (outgroup bases written as extra samples) → `determine_outgroup_coverage`.\
-
-NB to coordinate with REpDAPT pipeline at the `add_outgroups_vcf`  stage
-
-3. **Annotation**: `annotate_degeneracy` (fastDFE `DegeneracyAnnotation` from reference FASTA + GFF) → `filter_degeneracy` (0- and 4-fold only) → `filter_existing_outgroups` → `filter_no_cpg`.
-
-4. **Polarization**: `annotate_ancestral_allele` (fastDFE /Ancestree `MaximumLikelihoodAncestralAnnotation`, EST-SFS model, K2 substitution model, 9 subsampled ingroup haplotypes).\
-
-**Q TO Janek** Should we have a localtree step and have a review of uSFS sensitivity?
-
-5. **SFS**: `compute_sfs` (fastDFE `Parser`, n = 20, probabilistic projection and polarization, `TargetSiteCounter`, optional `CpGFiltration` and `BiasedGCConversionFiltration`); `fold_sfs` for folded variants.
-6. **Ne**: `estimate_Ne` = Watterson θ of the neutral SFS / (4μ), μ from Kuderna et al. 2023.
-7. **DFE**: `infer_dfe_unfolded` / `infer_dfe_folded` (`BaseInference`, gamma–exp or discrete, del or full, h = 0.5, ε = 0, 100 runs, 100 bootstraps); `infer_joint_dfe_*` with shared parameters.
-8. **Divergence**: `count_divergence` → `correct_divergence` → `infer_dfe_divergence` → `fit_divergence_pgls`.
-9. **Comparative**: `assemble_dfe_table` → `extract_regression_vars` → OLS and PGLS (nlme `gls`, `corBrownian` / `corGrafen`, A clade phylo species tree (in our Primates Examples the Kuderna et al tree pruned) in `regression.py` / `do_regression.R`; quantile epistasis test; πN/πS check.
+1. **VCF prep**: exons only, normalized, biallelic SNPs.
+2. **Outgroups**: minimap2 whole-genome alignment, outgroup bases added to the VCF (to be coordinated with the RepAdapt VCFs).
+3. **Annotation**: 0-fold and 4-fold sites (fastDFE `DegeneracyAnnotation`), CpG sites removed.
+4. **Polarization**: fastDFE `MaximumLikelihoodAncestralAnnotation` (EST-SFS model, K2, 9 subsampled ingroup haplotypes).
+5. **SFS**: fastDFE `Parser` with probabilistic projection and polarization, `TargetSiteCounter` for L.
+6. **Ne**: Watterson θ of the 4-fold SFS / 4μ.
+7. **DFE**: discrete and gamma–exponential, deleterious-only and full, plus joint fits.
+8. **Divergence**: fixed differences to the inferred ancestor, fitted jointly with the SFS.
+9. **Comparative**: OLS and PGLS (Brownian, Grafen) on a pruned species tree, quantile epistasis test, πN/πS check.
 
 ## What transfers to RepAdapt and what does not:
 
@@ -51,8 +39,6 @@ NB to coordinate with REpDAPT pipeline at the `add_outgroups_vcf`  stage
 | Population/metadata layer (`populations.py`, `resources/metadata/*`, `get_fasta_path`) | Rewrite | Hard-wired to the primate panel and local paths (`../primatediversity/...`) |
 | `do_regression.R` | Rewrite as a rule | Uses `setwd("~/PycharmProjects/...")` and scratch inputs |
 
-(Tech point made by Claude worth keeping ?) : The main engineering debt is that species, references and paths live in Python code rather than a config file; a RepAdapt port should move them into `config/` and a sample sheet, matching RepAdapt's own `config/server.yaml` convention.
-
 ## Data
 
 Inputs per species are the RepAdapt deliverables: realigned BAMs, the reference FASTA and gene GFF, and the VCF from [nextflow\_snp\_calling](https://github.com/RepAdapt/nextflow_snp_calling_linux). That VCF is called with `bcftools mpileup | bcftools call -mv` and filtered only on `AC=AN || MQ<30`, so it is variants-only and minimally filtered — both might matter for DFE work.
@@ -60,9 +46,6 @@ Inputs per species are the RepAdapt deliverables: realigned BAMs, the reference 
 **Inclusion criteria :**
 
 - $C1$: ≥ 4 diploid individuals (n = 8 haplotypes) from one genetic cluster; more is better, since RepAdapt samples are often larger than the primate panel.
-
-**Q** shoul we up the number of individuals ? 
-(We need a meaningful overview of smaple size per species per pops/per species from SAM)
 
 - $C2$:  High-coverage data only for the main analysis. Species processed with the [ANGSD pipeline](https://github.com/RepAdapt/ANGSD_Snakemake_Pipeline) (< 3X) cannot feed the genotype-based fastDFE parser; at most they enter a folded, deleterious-only side analysis via `realSFS` restricted to 0-fold and 4-fold site lists.
 
@@ -176,7 +159,7 @@ PrimateDFE's dominance extension (fixed h, co-estimated h, or h decreasing with 
 
 - **Polyploidy.** fastDFE assumes diploid genotypes. Allopolyploids with subgenome-resolved references (to be checked for, e.g., *Trifolium repens*, the ANGSD pipeline's test species) can be analysed per subgenome as diploids; autopolyploids are excluded from the main analysis.
 
-- **Clonality and perenniality** are recorded as covariates, not modelled. (SHOULD WE POINT BLANK exclude CLONAL sp ?)
+- **Clonality and perenniality** are recorded as covariates, not modelled.
 
 Sensitivity runs: h = 0.5 (main), h = 0.3 and 0.1 fixed, and the recessive h(S) callback already in `infer_dfe.py` (h = 0.4·e^(−0.02|S|)).
 
@@ -220,6 +203,14 @@ Simulation validation (paper Appendix C) should be repeated in SLiM with RepAdap
 
 Build a new Snakemake repository (working name RepAdaptDFE) that copies PrimateDFE's fastDFE scripts and RepAdapt's configuration conventions (`config/server.yaml`, SLURM and local profiles, conda + Apptainer, as in the RepAdapt [ANGSD](https://github.com/RepAdapt/ANGSD_Snakemake_Pipeline) and [highcov\_fst](https://github.com/RepAdapt/highcov_fst) pipelines).
 
+- Deliverables: per-species SFS (2–3 populations and the species range) and DFE tables, joinable with the primate data.
+
+```
+RepAdaptDFE/
+├── resources/                  # species.tsv, samples.tsv, species tree
+└── workflow/                   # Snakefile, rules/, scripts/, envs/, profiles/
+```
+
 
 ## Open / high leveldecisions and  impacts on analysis etc
 
@@ -232,32 +223,6 @@ The biggest issue is polarization: if too few RepAdapt species have usable outgr
 - [ ] Selfing and ploidy rules: confirm F > 0.5 threshold and which polyploid references are subgenome-resolved.
 - [ ] Is the all-sites CDS recall feasible on the RepAdapt BAMs as stored, or do we need the coverage-stats outputs instead?
 - [ ] Scope of question 4 (repeated-adaptation orthogroups): this current study or a follow-up?
-
-
-## Tentative work/ data structure 
-```
-RepAdaptDFE/
-├── config/server.yaml          # paths, n, filters, model grid
-├── resources/
-│   ├── species.tsv             # species, reference, outgroups, μ, gen. time, selfing, ploidy
-│   ├── samples.tsv             # RepAdapt sample sheet + chosen cluster
-│   └── tree/species.nwk
-└── workflow/
-    ├── Snakefile
-    ├── rules/                  # vcf.smk, outgroups.smk, sfs.smk, dfe.smk, divergence.smk, comparative.smk
-    ├── scripts/                # ported from PrimateDFE/workflow/scripts
-    ├── envs/
-    └── profile/, slurm/
-```
-
-Note TB : thi sis just a broad conceptual overview and could be skipped if not useful : 
-
-Rule chain per species:
-`filter_genotypes` → `callable_cds_sites` (new, all-sites recall on CDS) → `align_minimap` → `paf_to_fasta` → `add_outgroups_vcf` → `annotate_degeneracy` → `filter_degeneracy` → `filter_no_cpg` → `annotate_ancestral_allele` → `compute_sfs` → `estimate_Ne` → `infer_dfe` → `count_divergence` → `infer_dfe_divergence`. Across species: `assemble_dfe_table` → `extract_regression_vars` → `fit_pgls`.
-
-Deliverables : 
-- per-species SFS (ideally several eg 2-3 pp and a species range SFS ) under `results/sfs/` 
-- DFE tables under `results/tables/dfe/`, so both datasets can later be analysed together.
 
 
 ### Sources
