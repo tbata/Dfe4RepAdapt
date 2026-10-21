@@ -1,5 +1,5 @@
 # Dfe4RepAdapt
-Draft Analysis DFE for RepAdapt:
+Draft Analysis DFE for [RepAdapt](https://github.com/RepAdapt):
 
 * `Draft_Questions_overview.md` is a working doc that recaps briefly the aims of analysis but focuses on how to organize a future workflow. 
 
