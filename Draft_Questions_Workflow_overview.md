@@ -147,7 +147,7 @@ Reuse the PrimateDFE divergence model (fastDFE ≥ 1.3.0): fixed differences bet
 
 RepAdapt changes the caveats rather than the method:
 
-- **Independence.** As in the paper, the unit is the reference genome, not the population. RepAdapt mapped some species to a relative's reference (17 references for 25 plant species in Whiting et al. 2024), so the effective sample for ωa regressions may be under 20.
+- **Independence.** As in the paper, the unit is the reference genome, not the population. RepAdapt maps some species to a relative's reference (17 references for 25 plant species in Whiting et al. 2024), so the effective sample for ωa regressions is the number of distinct references.
 - **Saturation.** With distant outgroups, 4-fold divergence saturates and multiple hits bias D\_neut; use only species whose nearest outgroup passes the divergence ceiling set in the polarization section.
 - **Time mismatch.** Divergence integrates long-term Ne, whereas the regressor is contemporary Ne; the gap is larger for species with recent bottlenecks or range expansions, which RepAdapt's climate-gradient sampling may capture. (to be discussed with Sam and others)
 
