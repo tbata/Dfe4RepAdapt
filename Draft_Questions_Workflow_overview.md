@@ -214,15 +214,31 @@ RepAdaptDFE/
 
 ## Open / high leveldecisions and  impacts on analysis etc
 
-The biggest issue is polarization: if too few RepAdapt species have usable outgroups, questions 2–3 shrink to a folded, deleterious-only analysis.
-
+- [x] The biggest issue is polarization: if too few RepAdapt species have usable outgroups, questions 2–3 shrink to a folded, deleterious-only analysis.  
+  **A:** Species without usable outgroups or with low-quality GFFs are dropped, as in PrimateDFE.
+- [x] Should we have a localtree step and have a review of uSFS sensitivity?  
+  **A:** Yes. Polarize with Ancestree local-tree mode as well and compare with fixed-tree as a robustness check.
+- [x] Should we up the number of individuals?  
+  **A:** Set the common n from the trade-off between species retained and samples per species, once per-cluster sample sizes are known.
 - [ ] Which RepAdapt species have high-coverage VCFs, ≥ 4 individuals in one cluster, and a usable GFF? (Builds the species table.)
-- [ ] Do we include the animal species, or keep the first paper plant-only?
-- [ ] Outgroup ladder per species and the 4-fold divergence ceiling for polarization and divergence counts.
-- [ ] Source and quality of μ and generation time per species.
-- [ ] Selfing and ploidy rules: confirm F > 0.5 threshold and which polyploid references are subgenome-resolved.
-- [ ] Is the all-sites CDS recall feasible on the RepAdapt BAMs as stored, or do we need the coverage-stats outputs instead?
-- [ ] Scope of question 4 (repeated-adaptation orthogroups): this current study or a follow-up?
+- [x] Do we include the animal species, or keep the first paper plant-only?  
+  **A:** Plant-only. Most RepAdapt species are plants (163 of >250), so a plant-only study has the most power and can focus on plant-specific features, which adding animals would dilute.
+- [x] Outgroup ladder per species and the 4-fold divergence ceiling for polarization and divergence counts.  
+  **A:** No fixed ceiling: drop a species only if its divergence estimates break down or it is a clear regression outlier.
+- [x] Source and quality of μ and generation time per species.  
+  **A:** π4-fold as the primary predictor; compare Ne regressions across μ from several sources.
+- [ ] Selfing and ploidy rules: confirm F > 0.5 threshold and which polyploid references are subgenome-resolved.  
+  **A:** F > 0.5 agreed; subgenome resolution still to check.
+- [x] Should we point blank exclude clonal species?  
+  **A:** No. Clone-correct (one ramet per genet), then include.
+- [x] Is the all-sites CDS recall feasible on the RepAdapt BAMs as stored, or do we need the coverage-stats outputs instead?  
+  **A:** Not needed: take the 0-fold/4-fold ratio from the reference FASTA, as in PrimateDFE.
+- [x] gBGC check: A,T versus G,C spectra (S→W, W→S)?  
+  **A:** Stratifying could quantify gBGC strength, but filtering out affected sites (GC-conservative SNPs only) suffices as a robustness check.
+- [x] Scope of question 4 (repeated-adaptation orthogroups): this current study or a follow-up?  
+  **A:** Tentative run in this study, kept if promising.
+- [x] Workflow implementation.  
+  **A:** New repository built with PrimateDFE as the template, conda envs per rule, no containers. Species-level inputs in sample sheets; settings varied for contrastive validation as wildcards.
 
 
 ### Sources
