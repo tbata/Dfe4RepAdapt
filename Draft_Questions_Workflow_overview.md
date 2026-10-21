@@ -51,7 +51,7 @@ Inputs per species are the RepAdapt deliverables: realigned BAMs, the reference 
 
 - $C3$: A GFF complete enough to assign degeneracy (e.g. BUSCO completeness threshold on the annotation, to be set).
 
-- $C4$: At least two outgroup assemblies alignable to the reference (see ancestral allele section); otherwise folded SFS only.
+- $C4$: At least two outgroup assemblies alignable to the reference (see ancestral allele section).
 
 
 **Population choice.** RepAdapt sampling often spans climate gradients, 
@@ -71,43 +71,25 @@ with sample sizes and reference used, should be a the first table  central summa
 
 ## Degeneracy annotation
 
-We propose to use PrimateDFE's approach: 
-fastDFE `DegeneracyAnnotation` on each species' own reference and GFF, 
-retaining 0-fold (selected) and 4-fold (neutral) sites. 
+As in PrimateDFE: fastDFE `DegeneracyAnnotation` on each species' own reference and GFF, keeping 0-fold (selected) and 4-fold (neutral) sites. Species with low-quality GFFs are dropped (C3).
 
-CHECK WITH SAM : 
-Plant annotations need three preparatory steps first:
+Plant annotations first need (CHECK WITH SAM):
 
-- Restrict to one transcript per gene (longest or canonical isoform), so overlapping isoforms do not give a site two degeneracy classes.
-
-- Check that GFF and FASTA contig names match exactly; the RepAdapt calling README flags this as a frequent failure.
-
-- Where RepAdapt stitched a fragmented reference for calling, annotate on the coordinates actually used in the VCF (unstitched), not the stitched pseudo-chromosomes ??
+- One transcript per gene (longest or canonical isoform), so no site gets two degeneracy classes.
+- Matching GFF and FASTA contig names, a frequent failure according to the RepAdapt calling README.
+- For stitched references, annotation on the coordinates used in the VCF?
 
 ## Ancestral allele annotation and outgroups
 
-Outgroup choice is the step most likely to break when moving from primates to RepAdapt. PrimateDFE used 2–3 outgroups within catarrhines, aligned whole-genome with minimap2, then fastDFE `MaximumLikelihoodAncestralAnnotation` (EST-SFS, K2 model, 9 subsampled ingroup haplotypes), dropping sites missing more than one outgroup allele.
-
-For RepAdapt, shoudl we keep the same machinery and add these rules:
-
-- **Outgroup ladder.** Per species, 2–3 assemblies at increasing distance, ideally one congener; record 4-fold divergence to each (fastDFE reports outgroup divergence in its stats output) and set a ceiling beyond which synonymous sites are treated as saturated.
-- **Alignment settings.** Benchmark minimap2 presets (`asm5` / `asm10` / `asm20`) on one species pair; retain only one-to-one aligned blocks to avoid paralogs, which are common after plant whole-genome duplications.
-- **Fallback.** Species without an adequate ladder get folded spectra and deleterious-only DFEs; they still enter the Ne regressions but not ωa / α.
-- **Diagnostics per species**: number of sites annotated, mismatches, fitted branch lengths, and the polarization-probability plot already produced by `annotate_ancestral_allele.py`.
+Polarize with Ancestree local-tree mode, with fixed-tree mode (EST-SFS model, as in PrimateDFE) as a robustness check. Outgroups are aligned whole-genome with minimap2, keeping one-to-one blocks to avoid paralogs from whole-genome duplications. Species without usable outgroups are dropped (C4), as are those whose divergence estimates break down.
 
 ## SFS parsing
 
-Keep fastDFE's `Parser` with probabilistic projection and probabilistic polarization, standardized to n = n_min haplotypes as in PrimateDFE, with n_min = 20 as sensitivity runs where RepAdapt sample sizes allow.
+fastDFE `Parser` with probabilistic projection and polarization, as in PrimateDFE. The common n is set from the trade-off between species retained and samples per species.
 
-**Target sites L is the main change.** PrimateDFE set L = coding fraction × genome length × 0.8, the 0.8 assuming uniform codon usage. For RepAdapt:
-
-- The VCF is variants-only, so callable monomorphic sites are unknown. Re-call all sites on the CDS BED only (`bcftools call -m` without `-v`), cheap because CDS is a few percent of the genome, and apply the same DP/GQ/missingness filters. L then counts filtered 0- and 4-fold sites directly.
-- Count 0-fold and 4-fold sites from the annotation rather than using 0.8, since plant codon usage and GC content vary widely (e.g. GC-rich grass genes otehr plant or animal clades might experience that ).
-
-- L matters mostly for Ne; DFE fractions are invariant to uniform rescaling of both spectra (paper, Appendix Fig. A16).
-
-**Context filters.** Exclude CpG sites, as in PrimateDFE (`filter_no_cpg`, applied to both SNPs and L). Plants also methylate CHG contexts, so run a variant that additionally drops CHG sites. 
-Keep the GC-conservative (A↔T, C↔G) SFS as the gBGC check. (see table of checks below)
+- **Target sites L.** As in PrimateDFE, with the 0-fold/4-fold ratio taken from each species' reference FASTA (`TargetSiteCounter`). L matters mostly for Ne; DFE fractions are invariant to uniform rescaling of both spectra (paper, Appendix Fig. A16).
+- **Context filters.** Exclude CpG sites (SNPs and L), as in PrimateDFE. Plants also methylate CHG contexts, so a variant additionally drops CHG sites.
+- **gBGC.** GC-conservative (A↔T, C↔G) SFS as the robustness check.
 
 ## Estimating Ne
 
@@ -148,7 +130,7 @@ Reuse the PrimateDFE divergence model (fastDFE ≥ 1.3.0): fixed differences bet
 RepAdapt changes the caveats rather than the method:
 
 - **Independence.** As in the paper, the unit is the reference genome, not the population. RepAdapt maps some species to a relative's reference (17 references for 25 plant species in Whiting et al. 2024), so the effective sample for ωa regressions is the number of distinct references.
-- **Saturation.** With distant outgroups, 4-fold divergence saturates and multiple hits bias D\_neut; use only species whose nearest outgroup passes the divergence ceiling set in the polarization section.
+- **Saturation.** With distant outgroups, 4-fold divergence saturates and multiple hits bias D\_neut; drop species whose divergence estimates break down (see the polarization section).
 - **Time mismatch.** Divergence integrates long-term Ne, whereas the regressor is contemporary Ne; the gap is larger for species with recent bottlenecks or range expansions, which RepAdapt's climate-gradient sampling may capture. (to be discussed with Sam and others)
 
 ## Dominance, ploidy and mating system
@@ -217,7 +199,7 @@ RepAdaptDFE/
 - [x] The biggest issue is polarization: if too few RepAdapt species have usable outgroups, questions 2–3 shrink to a folded, deleterious-only analysis.  
   **A:** Species without usable outgroups or with low-quality GFFs are dropped, as in PrimateDFE.
 - [x] Should we have a localtree step and have a review of uSFS sensitivity?  
-  **A:** Yes. Polarize with Ancestree local-tree mode as well and compare with fixed-tree as a robustness check.
+  **A:** Yes. Ancestree local-tree mode is the main polarization, fixed-tree mode the robustness check.
 - [x] Should we up the number of individuals?  
   **A:** Set the common n from the trade-off between species retained and samples per species, once per-cluster sample sizes are known.
 - [ ] Which RepAdapt species have high-coverage VCFs, ≥ 4 individuals in one cluster, and a usable GFF? (Builds the species table.)
