@@ -1,1 +1,7 @@
 .idea/
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.html
+
